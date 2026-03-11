@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 The 'shadcn-ui' package is deprecated. Please use the 'shadcn' package instead
 use pnpm as the package manager

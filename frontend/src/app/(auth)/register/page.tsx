@@ -54,7 +54,7 @@ export default function RegisterPage() {
 
       const { token, user } = response.data;
       login(token, user);
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       setError('注册失败，该用户名可能已被占用。');
       console.error('Registration failed:', err);

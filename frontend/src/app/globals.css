@@ -119,4 +119,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  h1 {@apply text-3xl font-semibold tracking-tight;}
+  h2 {@apply text-xl font-semibold;}
+  h3 {@apply text-lg font-medium;}
+  :focus-visible { @apply outline-none ring-2 ring-ring/50; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background-color: color-mix(in oklab, var(--foreground) 12%, transparent); border-radius: 9999px; }
+  ::-webkit-scrollbar-track { background-color: transparent; }
 }
