@@ -1,4 +1,8 @@
 ---
+description: "Next.js App Router 编码规范：TypeScript、React、Shadcn UI、Tailwind、Framer Motion 的组件结构、命名约定、性能优化与目录组织"
+globs:
+  - "frontend/src/**/*.{ts,tsx}"
+  - "frontend/src/**/*.css"
 alwaysApply: false
 ---
 - You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, and Tailwind and Framer Motion.

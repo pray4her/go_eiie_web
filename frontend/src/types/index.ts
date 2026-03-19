@@ -552,3 +552,103 @@ export interface ResumeProcessApiError {
   retry_after?: number | null;
   failed_prompt_ids?: number[];
 }
+
+// ========== Customer Analysis (客户号级沟通需求分析) ==========
+
+export type CustomerAnalysisRunStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type CustomerAnalysisItemStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'skipped'
+  | 'failed';
+
+export interface CustomerAnalysisTriggerRequest {
+  customer_id: number;
+  include_file_ids?: number[];
+  exclude_file_ids?: number[];
+}
+
+export interface CustomerAnalysisTriggerResponse {
+  message: string;
+  run_id: number;
+  customer_id: number;
+}
+
+export interface CustomerAnalysisRunListItem {
+  id: number;
+  customer_id: number;
+  status: CustomerAnalysisRunStatus;
+  is_stale: boolean;
+  stale_reason: string;
+  trigger_source: string;
+  selected_file_count: number;
+  category_count: number;
+  completed_count: number;
+  failed_count: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface CustomerAnalysisRunsListResponse {
+  total: number;
+  items: CustomerAnalysisRunListItem[];
+}
+
+export interface CustomerAnalysisDisplayRun {
+  id: number;
+  customer_id: number;
+  status: CustomerAnalysisRunStatus;
+  is_stale: boolean;
+  stale_reason: string;
+  trigger_source: string;
+  include_file_ids: number[];
+  exclude_file_ids: number[];
+  selected_file_ids: number[];
+  summary_json: Record<string, unknown> | null;
+  error_message: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerAnalysisOverview {
+  customer_id: number;
+  run_id: number;
+  is_stale: boolean;
+  selected_file_count: number;
+  category_count: number;
+  completed_count: number;
+  failed_count: number;
+}
+
+export interface CustomerAnalysisResumeProfile {
+  status: CustomerAnalysisItemStatus | CustomerAnalysisRunStatus;
+  primary_resume_file_id: number | null;
+  selected_resume_files: number[];
+  profile_data: Record<string, unknown> | null;
+  formatted_resume_text: string | null;
+  error_message: string | null;
+}
+
+export interface CustomerAnalysisDisplayItem {
+  id: number;
+  rule_code: string;
+  category_key: string;
+  display_name: string;
+  status: CustomerAnalysisItemStatus;
+  result_status: string | null;
+  communication_text: string | null;
+  source_file_ids: number[];
+  structured_data: Record<string, unknown> | null;
+  issue_count: number;
+  error_message: string | null;
+}
+
+export interface CustomerAnalysisDisplayResponse {
+  run: CustomerAnalysisDisplayRun;
+  overview: CustomerAnalysisOverview;
+  resume_profile: CustomerAnalysisResumeProfile | null;
+  items: CustomerAnalysisDisplayItem[];
+}
