@@ -442,20 +442,27 @@ export interface ResearchPaperJobDetail {
 
 // ========== Resume Process (简历处理模块) ==========
 
-export type ResumeProcessJobStatus =
+/** 初次分析主流程状态 */
+export type ResumeProcessJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+/** 二次生成状态 */
+export type ResumeProcessSecondaryStatus =
+  | 'idle'
   | 'pending'
   | 'processing'
+  | 'retrying'
   | 'completed'
-  | 'failed'
   | 'completed_partial'
-  | 'secondary_completed';
+  | 'failed';
 
 export interface ResumeProcessJob {
   id: number;
   user_id: number;
   source_file_id: number;
   status: ResumeProcessJobStatus;
+  secondary_status?: ResumeProcessSecondaryStatus;
   error_message: string | null;
+  secondary_error_message?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -469,9 +476,25 @@ export interface ResumeProcessInitialResult {
   error_message: string | null;
 }
 
+export interface ResumeProcessSecondaryRun {
+  id: number;
+  job_id: number;
+  retry_of_run_id?: number | null;
+  status: ResumeProcessSecondaryStatus;
+  prompt_ids: number[];
+  failed_prompt_ids: number[];
+  error_message?: string | null;
+  retryable: boolean;
+  retry_after_seconds?: number | null;
+  total_prompts: number;
+  completed_prompts: number;
+  error_prompts: number;
+}
+
 export interface ResumeProcessSecondaryResult {
   id: number;
   job_id: number;
+  secondary_run_id?: number;
   prompt_id: number;
   generated_text: string;
   status: 'processing' | 'completed' | 'error';
@@ -491,12 +514,41 @@ export interface ResumeProcessJobsListResponse {
 export interface ResumeProcessJobDetailsResponse {
   job: ResumeProcessJob;
   initial_result: ResumeProcessInitialResult | null;
+  secondary_run?: ResumeProcessSecondaryRun | null;
   secondary_results: ResumeProcessSecondaryResult[];
 }
 
+export interface ResumeProcessTriggerSecondaryResponse {
+  message: string;
+  job_id: number;
+  run_id: number;
+}
+
+export interface ResumeProcessSecondaryResultsResponse {
+  run?: ResumeProcessSecondaryRun | null;
+  items: ResumeProcessSecondaryResult[];
+}
+
+/** SSE 消息结构（按 stage/status 驱动，不再从 message 推断） */
 export interface ResumeProcessJobUpdatePayload {
   job_id: number;
-  status: ResumeProcessJobStatus;
+  run_id?: number;
+  stage?: 'initial' | 'secondary';
+  status?: string;
   message?: string;
-  result_url?: string;
+  retryable?: boolean;
+  retry_after?: number | null;
+  failed_prompt_ids?: number[];
+  job_status?: ResumeProcessJobStatus;
+  secondary_status?: ResumeProcessSecondaryStatus;
+}
+
+/** 统一错误响应结构 */
+export interface ResumeProcessApiError {
+  code: string;
+  stage?: 'upload' | 'initial' | 'secondary' | 'export' | 'job';
+  message: string;
+  retryable?: boolean;
+  retry_after?: number | null;
+  failed_prompt_ids?: number[];
 }

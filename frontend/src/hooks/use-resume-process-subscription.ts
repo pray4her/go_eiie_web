@@ -13,11 +13,20 @@ interface UseResumeProcessSubscriptionOptions {
 }
 
 interface ResumeProcessSubscriptionState {
-  status: ResumeProcessJobStatus | 'idle';
+  /** 初次分析状态 */
+  jobStatus: ResumeProcessJobStatus | 'idle';
+  /** 二次生成状态（SSE 推送的 secondary_status） */
+  secondaryStatus: string | 'idle';
   message: string;
-  resultUrl?: string;
+  runId?: number;
   error: Error | null;
   connectionStatus: ConnectionStatus;
+}
+
+const SECONDARY_TERMINAL_STATUSES = ['completed', 'completed_partial', 'failed'];
+
+function isSecondaryTerminal(status?: string): boolean {
+  return status != null && SECONDARY_TERMINAL_STATUSES.includes(status);
 }
 
 export function useResumeProcessSubscription({
@@ -26,9 +35,10 @@ export function useResumeProcessSubscription({
   onStatusUpdate,
 }: UseResumeProcessSubscriptionOptions): ResumeProcessSubscriptionState {
   const [state, setState] = useState<ResumeProcessSubscriptionState>({
-    status: 'idle',
+    jobStatus: 'idle',
+    secondaryStatus: 'idle',
     message: '',
-    resultUrl: undefined,
+    runId: undefined,
     error: null,
     connectionStatus: 'idle',
   });
@@ -50,16 +60,29 @@ export function useResumeProcessSubscription({
         setState((prev) => ({ ...prev, connectionStatus: 'connected' }));
       },
       onMessage: (data) => {
+        const jobStatus = (data.job_status ?? data.status) as ResumeProcessJobStatus | undefined;
+        const secondaryStatus = data.secondary_status ?? (data.stage === 'secondary' ? data.status : undefined);
         setState((prev) => ({
           ...prev,
-          status: data.status,
+          jobStatus: jobStatus ?? prev.jobStatus,
+          secondaryStatus: secondaryStatus ?? prev.secondaryStatus,
           message: data.message ?? '',
-          resultUrl: data.result_url,
+          runId: data.run_id ?? prev.runId,
           error: null,
         }));
         onStatusUpdateRef.current?.(data);
 
-        if (data.status === 'completed' || data.status === 'failed') {
+        if (data.stage === 'initial' && (data.status === 'completed' || data.status === 'failed')) {
+          try {
+            connectionRef.current?.close();
+          } catch {}
+          setState((prev) => ({ ...prev, connectionStatus: 'closed' }));
+        } else if (data.stage === 'secondary' && isSecondaryTerminal(data.status)) {
+          try {
+            connectionRef.current?.close();
+          } catch {}
+          setState((prev) => ({ ...prev, connectionStatus: 'closed' }));
+        } else if (!data.stage && (data.status === 'completed' || data.status === 'failed')) {
           try {
             connectionRef.current?.close();
           } catch {}

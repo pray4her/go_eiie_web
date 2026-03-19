@@ -7,13 +7,14 @@ import { downloadResumeProcessExportTemplate } from '@/lib/resume-process';
 
 interface ResumeProcessExportButtonProps {
   jobId: number | string;
+  runId?: number | null;
   compact?: boolean;
 }
 
-export function ResumeProcessExportButton({ jobId, compact }: ResumeProcessExportButtonProps) {
+export function ResumeProcessExportButton({ jobId, runId, compact }: ResumeProcessExportButtonProps) {
   async function handleDownload() {
     try {
-      const { blob, fileName } = await downloadResumeProcessExportTemplate(jobId);
+      const { blob, fileName } = await downloadResumeProcessExportTemplate(jobId, runId);
       const url = window.URL.createObjectURL(blob);
 
       const link = document.createElement('a');

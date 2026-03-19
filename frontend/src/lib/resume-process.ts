@@ -3,12 +3,27 @@ import { useAuthStore } from '@/contexts/auth-store';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { toast } from 'sonner';
 import {
+  ResumeProcessApiError,
   ResumeProcessJobDetailsResponse,
   ResumeProcessJobUpdatePayload,
   ResumeProcessJobsListResponse,
-  ResumeProcessSecondaryResult,
+  ResumeProcessSecondaryResultsResponse,
+  ResumeProcessTriggerSecondaryResponse,
   ResumeProcessUploadResponse,
 } from '@/types';
+
+/** 从 API 错误中提取统一错误结构，用于展示 toast */
+export function extractResumeProcessError(error: unknown): { message: string; retryAfter?: number } {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data && typeof data === 'object') {
+    const err = data as Partial<ResumeProcessApiError>;
+    if (typeof err.message === 'string') {
+      const retryAfter = typeof err.retry_after === 'number' ? err.retry_after : undefined;
+      return { message: err.message, retryAfter };
+    }
+  }
+  return { message: '操作失败，请稍后重试。' };
+}
 
 interface ListParams {
   limit?: number;
@@ -49,29 +64,52 @@ export async function fetchResumeProcessJobs(params: ListParams): Promise<Resume
   return response.data;
 }
 
-export async function fetchResumeProcessJob(jobId: number | string): Promise<ResumeProcessJobDetailsResponse> {
-  const response = await api.get<ResumeProcessJobDetailsResponse>(`/resume-process/jobs/${jobId}`);
+export async function fetchResumeProcessJob(
+  jobId: number | string,
+  runId?: number | null
+): Promise<ResumeProcessJobDetailsResponse> {
+  const params = runId != null ? { run_id: runId } : undefined;
+  const response = await api.get<ResumeProcessJobDetailsResponse>(`/resume-process/jobs/${jobId}`, { params });
   return {
     ...response.data,
     initial_result: response.data.initial_result ?? null,
+    secondary_run: response.data.secondary_run ?? null,
     secondary_results: response.data.secondary_results ?? [],
   };
 }
 
-export async function triggerResumeProcessSecondary(jobId: number | string): Promise<void> {
-  await api.post(`/resume-process/jobs/${jobId}/trigger-secondary`);
+export async function triggerResumeProcessSecondary(
+  jobId: number | string
+): Promise<ResumeProcessTriggerSecondaryResponse> {
+  const response = await api.post<ResumeProcessTriggerSecondaryResponse>(
+    `/resume-process/jobs/${jobId}/trigger-secondary`
+  );
+  return response.data;
 }
 
-export async function fetchResumeProcessSecondaryResults(jobId: number | string): Promise<ResumeProcessSecondaryResult[]> {
-  const response = await api.get<{ items: ResumeProcessSecondaryResult[] }>(`/resume-process/jobs/${jobId}/secondary-results`);
-  return response.data.items ?? [];
+export async function fetchResumeProcessSecondaryResults(
+  jobId: number | string,
+  runId?: number | null
+): Promise<ResumeProcessSecondaryResultsResponse> {
+  const params = runId != null ? { run_id: runId } : undefined;
+  const response = await api.get<ResumeProcessSecondaryResultsResponse>(
+    `/resume-process/jobs/${jobId}/secondary-results`,
+    { params }
+  );
+  return {
+    run: response.data.run ?? null,
+    items: response.data.items ?? [],
+  };
 }
 
 export async function downloadResumeProcessExportTemplate(
-  jobId: number | string
+  jobId: number | string,
+  runId?: number | null
 ): Promise<{ blob: Blob; fileName: string }> {
+  const params = runId != null ? { run_id: runId } : undefined;
   const response = await api.get(`/resume-process/jobs/${jobId}/export-template`, {
     responseType: 'blob',
+    params,
   });
 
   const contentDisposition = (response.headers as Record<string, string | undefined>)['content-disposition'];

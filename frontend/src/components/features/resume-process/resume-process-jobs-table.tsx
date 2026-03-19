@@ -20,7 +20,8 @@ export function ResumeProcessJobsTable({ items, onView }: ResumeProcessJobsTable
       <TableHeader>
         <TableRow>
           <TableHead>Job ID</TableHead>
-          <TableHead>状态</TableHead>
+          <TableHead>初次分析</TableHead>
+          <TableHead>二次生成</TableHead>
           <TableHead>错误信息</TableHead>
           <TableHead>创建时间</TableHead>
           <TableHead>更新时间</TableHead>
@@ -32,7 +33,16 @@ export function ResumeProcessJobsTable({ items, onView }: ResumeProcessJobsTable
           <TableRow key={item.id}>
             <TableCell className="font-mono text-xs">{String(item.id)}</TableCell>
             <TableCell><StatusBadge status={item.status} /></TableCell>
-            <TableCell className="max-w-[320px] truncate" title={item.error_message || ''}>{item.error_message || '-'}</TableCell>
+            <TableCell>
+              {item.secondary_status ? (
+                <StatusBadge status={item.secondary_status} />
+              ) : (
+                <span className="text-muted-foreground text-sm">-</span>
+              )}
+            </TableCell>
+            <TableCell className="max-w-[320px] truncate" title={item.error_message || item.secondary_error_message || ''}>
+              {item.error_message || item.secondary_error_message || '-'}
+            </TableCell>
             <TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
             <TableCell>{new Date(item.updated_at).toLocaleString()}</TableCell>
             <TableCell className="text-right">

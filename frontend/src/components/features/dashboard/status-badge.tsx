@@ -1,10 +1,23 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { ApiFile, JobStatus, AutoAnnotationJobStatus, ResearchPaperJobStatus, ResumeProcessJobStatus } from "@/types";
+import {
+  ApiFile,
+  JobStatus,
+  AutoAnnotationJobStatus,
+  ResearchPaperJobStatus,
+  ResumeProcessJobStatus,
+  ResumeProcessSecondaryStatus,
+} from "@/types";
 
 interface StatusBadgeProps {
-  status: ApiFile["ProcessingStatus"] | JobStatus | AutoAnnotationJobStatus | ResearchPaperJobStatus | ResumeProcessJobStatus;
+  status:
+    | ApiFile["ProcessingStatus"]
+    | JobStatus
+    | AutoAnnotationJobStatus
+    | ResearchPaperJobStatus
+    | ResumeProcessJobStatus
+    | ResumeProcessSecondaryStatus;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
@@ -26,6 +39,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     process_failed: { label: "处理失败", variant: "destructive" as const },
     failed_partial: { label: "部分失败", variant: "warning" as const },
     partial: { label: "部分成功", variant: "warning" as const },
+    idle: { label: "未二次生成", variant: "secondary" as const },
+    retrying: { label: "自动重试中", variant: "default" as const },
   } as const;
 
   const statusEntry = statusConfig[status as keyof typeof statusConfig];

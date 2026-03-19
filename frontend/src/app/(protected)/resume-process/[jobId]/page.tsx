@@ -14,9 +14,9 @@ import { ResumeProcessExportButton } from '@/components/features/resume-process/
 import { ResumeProcessImportantColumnsNotice } from '@/components/features/resume-process/resume-process-important-columns-notice';
 import { ResumeProcessSecondaryParsedTable } from '@/components/features/resume-process/resume-process-secondary-parsed-table';
 import { useResumeProcessSubscription } from '@/hooks/use-resume-process-subscription';
-import { fetchResumeProcessJob, triggerResumeProcessSecondary } from '@/lib/resume-process';
+import { extractResumeProcessError, fetchResumeProcessJob, triggerResumeProcessSecondary } from '@/lib/resume-process';
 import { normalizeResumeProcessText, parseSecondaryNOFieldsFromManyTexts } from '@/lib/resume-process-secondary-parser';
-import { ResumeProcessJobDetailsResponse, ResumeProcessInitialResult, ResumeProcessSecondaryResult } from '@/types';
+import { ResumeProcessJobDetailsResponse, ResumeProcessInitialResult } from '@/types';
 
 function getInitialMarkdownText(initial: ResumeProcessInitialResult | null): string {
   if (!initial) return '';
@@ -75,14 +75,21 @@ export default function ResumeProcessJobDetailsPage() {
   const [data, setData] = useState<ResumeProcessJobDetailsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isTriggeringSecondary, setIsTriggeringSecondary] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<number | null>(null);
 
   const refreshThrottleRef = useRef<number | null>(null);
 
-  const load = useCallback(async () => {
-    const resp = await fetchResumeProcessJob(jobId);
-    setData(resp);
-    return resp;
-  }, [jobId]);
+  const load = useCallback(
+    async (runId?: number | null) => {
+      const resp = await fetchResumeProcessJob(jobId, runId);
+      setData(resp);
+      if (resp.secondary_run?.id != null) {
+        setCurrentRunId(resp.secondary_run.id);
+      }
+      return resp;
+    },
+    [jobId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -116,11 +123,15 @@ export default function ResumeProcessJobDetailsPage() {
   });
 
   const initialMarkdown = useMemo(() => getInitialMarkdownText(data?.initial_result ?? null), [data?.initial_result]);
+
+  const secondaryStatus = data?.job.secondary_status ?? 'idle';
+  const isSecondaryInProgress = ['pending', 'processing', 'retrying'].includes(secondaryStatus);
   const canTriggerSecondary = useMemo(() => {
     if (!data?.initial_result) return false;
     if (data.initial_result.status !== 'completed') return false;
-    return (data.secondary_results ?? []).length === 0;
-  }, [data?.initial_result, data?.secondary_results]);
+    if (data.job.status !== 'completed') return false;
+    return !isSecondaryInProgress;
+  }, [data?.initial_result, data?.job.status, isSecondaryInProgress]);
 
   const hasAnySecondaryCompleted = useMemo(
     () => (data?.secondary_results ?? []).some((r) => r.status === 'completed'),
@@ -128,11 +139,18 @@ export default function ResumeProcessJobDetailsPage() {
   );
 
   const isSecondaryAllCompleted = useMemo(() => {
+    const run = data?.secondary_run;
+    if (run) return run.status === 'completed';
     const results = data?.secondary_results ?? [];
     if (results.length === 0) return false;
-    if (data?.job.status === 'secondary_completed') return true;
     return results.every((r) => r.status === 'completed');
-  }, [data?.secondary_results, data?.job.status]);
+  }, [data?.secondary_run, data?.secondary_results]);
+
+  const secondaryButtonLabel = useMemo(() => {
+    if (isSecondaryInProgress) return '生成中';
+    if (['completed_partial', 'failed'].includes(secondaryStatus)) return '重试失败项';
+    return '二次生成';
+  }, [secondaryStatus, isSecondaryInProgress]);
 
   const secondaryParsed = useMemo(() => {
     const texts = (data?.secondary_results ?? []).map((r) => r.generated_text || '');
@@ -143,11 +161,14 @@ export default function ResumeProcessJobDetailsPage() {
     if (!jobId) return;
     setIsTriggeringSecondary(true);
     try {
-      await triggerResumeProcessSecondary(jobId);
+      const { run_id } = await triggerResumeProcessSecondary(jobId);
       toast.success('已触发二次生成', { description: '开始进行二次生成，请稍候...' });
-      await load();
-    } catch {
-      toast.error('触发失败', { description: '无法触发二次生成，请稍后重试。' });
+      setCurrentRunId(run_id);
+      await load(run_id);
+    } catch (err) {
+      const { message, retryAfter } = extractResumeProcessError(err);
+      const desc = retryAfter != null ? `请在 ${retryAfter} 秒后重试` : undefined;
+      toast.error('触发失败', { description: desc ?? message });
     } finally {
       setIsTriggeringSecondary(false);
     }
@@ -159,7 +180,9 @@ export default function ResumeProcessJobDetailsPage() {
         <div className="flex items-center justify-between">
           <PageTitle>简历处理详情</PageTitle>
           <div className="flex items-center gap-2">
-            {hasAnySecondaryCompleted ? <ResumeProcessExportButton jobId={jobId} compact /> : null}
+            {hasAnySecondaryCompleted ? (
+              <ResumeProcessExportButton jobId={jobId} runId={currentRunId ?? undefined} compact />
+            ) : null}
             <Button variant="outline" size="sm" onClick={() => router.push('/resume-process')}>
               返回列表
             </Button>
@@ -202,9 +225,15 @@ export default function ResumeProcessJobDetailsPage() {
                   <p className="font-mono text-sm">{String(data.job.id)}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">状态</p>
+                  <p className="text-sm font-medium text-muted-foreground">初次分析</p>
                   <StatusBadge status={data.job.status} />
                 </div>
+                {data.job.secondary_status ? (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">二次生成</p>
+                    <StatusBadge status={data.job.secondary_status} />
+                  </div>
+                ) : null}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">创建时间</p>
                   <p className="text-sm">{new Date(data.job.created_at).toLocaleString()}</p>
@@ -217,6 +246,11 @@ export default function ResumeProcessJobDetailsPage() {
               {data.job.error_message ? (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-700">{data.job.error_message}</p>
+                </div>
+              ) : null}
+              {data.job.secondary_error_message ? (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-700">{data.job.secondary_error_message}</p>
                 </div>
               ) : null}
             </CardContent>
@@ -237,15 +271,19 @@ export default function ResumeProcessJobDetailsPage() {
                     )}
                   </CardDescription>
                 </div>
-                {canTriggerSecondary ? (
-                  <Button onClick={handleTriggerSecondary} disabled={isTriggeringSecondary} size="sm">
+                {canTriggerSecondary || isSecondaryInProgress ? (
+                  <Button
+                    onClick={handleTriggerSecondary}
+                    disabled={isTriggeringSecondary || isSecondaryInProgress}
+                    size="sm"
+                  >
                     {isTriggeringSecondary ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         正在触发...
                       </>
                     ) : (
-                      '继续二次生成'
+                      secondaryButtonLabel
                     )}
                   </Button>
                 ) : null}
@@ -282,17 +320,27 @@ export default function ResumeProcessJobDetailsPage() {
                   <CardDescription>
                     {isSecondaryAllCompleted ? (
                       <span className="text-green-600 font-medium italic">二次生成内容已全部生成完成</span>
-                    ) : (data.secondary_results ?? []).length > 0 ? (
+                    ) : isSecondaryInProgress ? (
                       <span className="flex items-center text-amber-600">
                         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        正在生成中...
+                        {secondaryStatus === 'retrying' ? '自动重试中...' : '正在生成中...'}
+                      </span>
+                    ) : data.secondary_run ? (
+                      <span>
+                        当前批次 Run #{data.secondary_run.id} · 成功 {data.secondary_run.completed_prompts} /{' '}
+                        {data.secondary_run.total_prompts}
+                        {data.secondary_run.failed_prompt_ids?.length
+                          ? ` · 失败: [${data.secondary_run.failed_prompt_ids.join(', ')}]`
+                          : ''}
                       </span>
                     ) : (
                       '二次生成完成后可导出 Excel 模板'
                     )}
                   </CardDescription>
                 </div>
-                {hasAnySecondaryCompleted ? <ResumeProcessExportButton jobId={jobId} /> : null}
+                {hasAnySecondaryCompleted ? (
+                  <ResumeProcessExportButton jobId={jobId} runId={currentRunId ?? undefined} />
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
