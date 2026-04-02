@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Container } from '@/components/ui/container';
+import { PageLoadingCard } from '@/components/ui/page-loading';
 import { PageHeader, PageTitle } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -193,11 +194,7 @@ export default function AutoAnnotationItemDetailPage() {
       </PageHeader>
 
       {isLoading ? (
-        <Card className="mt-6">
-          <CardContent className="p-6 text-muted-foreground">
-            正在加载...
-          </CardContent>
-        </Card>
+        <PageLoadingCard className="mt-6" message="正在加载条目详情…" />
       ) : !data ? (
         <Card className="mt-6">
           <CardHeader>

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { parseAsInteger, parseAsString, useQueryState } from 'nuqs';
 import { Container } from '@/components/ui/container';
 import { PageHeader, PageTitle, PageDescription } from '@/components/ui/page-header';
+import { ListLoadingPlaceholder } from '@/components/ui/page-loading';
 
 export default function ExternalResumesPage() {
   const router = useRouter();
@@ -76,7 +77,7 @@ export default function ExternalResumesPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            <p className="text-muted-foreground">正在加载...</p>
+            <ListLoadingPlaceholder message="正在加载任务列表…" withTableSkeleton />
           ) : (
             <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
               <ExternalResumeTable

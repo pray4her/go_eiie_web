@@ -118,13 +118,13 @@ export default function ResearchPaperAnnotationPage() {
   };
 
   return (
-    <Container>
+    <Container className="py-6 max-w-none">
       <PageHeader>
         <PageTitle>论文自动标注</PageTitle>
         <PageDescription>上传论文 PDF 并指定专家姓名，AI 将自动提取元数据并在 PDF 中生成红框标注。</PageDescription>
       </PageHeader>
 
-      <div className="grid gap-8 mt-8">
+      <div className="mt-8 space-y-8">
         <Section>
           <Card>
             <CardHeader>

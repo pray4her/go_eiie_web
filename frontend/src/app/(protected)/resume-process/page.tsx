@@ -12,6 +12,7 @@ import { ResumeProcessJobsListResponse } from '@/types';
 import { ResumeProcessUploadForm } from '@/components/features/resume-process/resume-process-upload-form';
 import { ResumeProcessJobsTable } from '@/components/features/resume-process/resume-process-jobs-table';
 import { ResumeProcessPagination } from '@/components/features/resume-process/resume-process-pagination';
+import { ListLoadingPlaceholder } from '@/components/ui/page-loading';
 
 export default function ResumeProcessPage() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function ResumeProcessPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            <p className="text-muted-foreground">正在加载...</p>
+            <ListLoadingPlaceholder message="正在加载任务列表…" withTableSkeleton />
           ) : (
             <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
               <ResumeProcessJobsTable items={data?.items ?? []} onView={(jobId) => router.push(`/resume-process/${jobId}`)} />

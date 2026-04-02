@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import { Container } from '@/components/ui/container';
 import { PageHeader, PageTitle, PageDescription } from '@/components/ui/page-header';
+import { ListLoadingPlaceholder } from '@/components/ui/page-loading';
 
 export default function AnnotationHistoryPage() {
   const router = useRouter();
@@ -67,7 +68,7 @@ export default function AnnotationHistoryPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            <p className="text-muted-foreground">正在加载...</p>
+            <ListLoadingPlaceholder message="正在加载标注记录…" withTableSkeleton />
           ) : (
             <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
               <AnnotationHistoryTable

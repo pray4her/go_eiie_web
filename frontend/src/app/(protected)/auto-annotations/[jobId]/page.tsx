@@ -12,6 +12,7 @@ import { fetchAutoAnnotationJob } from '@/lib/auto-annotations';
 import { StatusBadge } from '@/components/features/dashboard/status-badge';
 import { AutoAnnotationZipDownloadButton } from '@/components/features/auto-annotations/auto-annotation-zip-download-button';
 import { AutoAnnotationItemsTable } from '@/components/features/auto-annotations/auto-annotation-items-table';
+import { PageLoadingCard } from '@/components/ui/page-loading';
 
 export default function AutoAnnotationJobDetailPage() {
   const router = useRouter();
@@ -68,11 +69,7 @@ export default function AutoAnnotationJobDetailPage() {
       </PageHeader>
 
       {isLoading ? (
-        <Card className="mt-6">
-          <CardContent className="p-6 text-muted-foreground">
-            正在加载...
-          </CardContent>
-        </Card>
+        <PageLoadingCard className="mt-6" message="正在加载任务详情…" />
       ) : !data ? (
         <Card className="mt-6">
           <CardHeader>

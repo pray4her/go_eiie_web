@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ExternalResumeDetails } from '@/components/features/external-resumes/external-resume-details';
 import { Container } from '@/components/ui/container';
 import { PageHeader, PageTitle } from '@/components/ui/page-header';
+import { PageLoadingCard } from '@/components/ui/page-loading';
 
 export default function ExternalResumeDetailsPage() {
   const router = useRouter();
@@ -61,9 +62,7 @@ export default function ExternalResumeDetailsPage() {
       </PageHeader>
 
       {isLoading ? (
-        <Card>
-          <CardContent className="p-6 text-muted-foreground">正在加载...</CardContent>
-        </Card>
+        <PageLoadingCard message="正在加载任务详情…" />
       ) : !data ? (
         <Card>
           <CardHeader>

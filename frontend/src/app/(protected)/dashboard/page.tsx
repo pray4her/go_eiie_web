@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import api from "@/lib/api";
 import { ApiFile } from "@/types";
 import { FileUploadZone } from "@/components/features/dashboard/file-upload-zone";
 import { FileStatusTable } from "@/components/features/dashboard/file-status-table";
+import { FileStatusPagination } from "@/components/features/dashboard/file-status-pagination";
 import { FileDetailsDrawer } from "@/components/features/dashboard/file-details-drawer";
 import { useFileExtractionSubscription } from "@/hooks/use-file-extraction-subscription";
 import { Container } from "@/components/ui/container";
@@ -15,32 +15,61 @@ import { SkeletonTable } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { CustomerExportDialog } from "@/components/features/dashboard/customer-export-dialog";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+import { mapFilesQueryItemToApiFile, fetchFilesQuery } from "@/lib/files-query";
+import { parseAsInteger, useQueryState } from "nuqs";
 
 export default function DashboardPage() {
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1).withOptions({ shallow: false }));
+  const [pageSize, setPageSize] = useQueryState("page_size", parseAsInteger.withDefault(20).withOptions({ shallow: false }));
+
   const [files, setFiles] = useState<ApiFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<ApiFile | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [activeParentId, setActiveParentId] = useState<number | null>(null);
   const [refreshSignalCounter, setRefreshSignalCounter] = useState(0);
   const [lastUploadAutoAnnotate, setLastUploadAutoAnnotate] = useState(false);
 
-  const fetchFiles = useCallback(async () => {
+  const fetchFiles = useCallback(async (options?: { silent?: boolean }) => {
+    const shouldShowLoading = !options?.silent;
+    if (shouldShowLoading) {
+      setIsLoading(true);
+    }
+
     try {
-      const response = await api.get<ApiFile[]>("/files");
-      const filteredFiles = response.data.filter(file => 
-        (file.OriginalFileName.toLowerCase().endsWith('.zip') || 
-         file.OriginalFileName.toLowerCase().endsWith('.rar')) ||
-        file.TaskType === '信息提取'
-      );
-      setFiles(filteredFiles);
+      const response = await fetchFilesQuery({
+        page: Math.max(page, 1),
+        page_size: Math.min(Math.max(pageSize, 1), 100),
+        scope: "parent",
+        task_type: "package_extraction",
+        sort_by: "created_at",
+        sort_order: "desc",
+      });
+
+      const mappedFiles = response.items.map(mapFilesQueryItemToApiFile);
+      setFiles(mappedFiles);
+      setTotal(response.total);
+      setTotalPages(Math.max(response.total_page, 1));
+
+      if (response.total_page > 0 && page > response.total_page) {
+        setPage(response.total_page);
+      }
     } catch (error) {
       console.error("Failed to fetch files:", error);
-      // Optionally, show a toast notification for fetch errors
+      if (shouldShowLoading) {
+        toast.error("加载文件列表失败，请稍后重试。");
+      }
     } finally {
-      setIsLoading(false);
+      if (shouldShowLoading) {
+        setIsLoading(false);
+      }
     }
-  }, []);
+  }, [page, pageSize, setPage]);
 
   useEffect(() => {
     fetchFiles();
@@ -48,7 +77,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      fetchFiles();
+      fetchFiles({ silent: true });
     }, 5000);
     return () => window.clearInterval(id);
   }, [fetchFiles]);
@@ -60,7 +89,7 @@ export default function DashboardPage() {
       }
     },
     onCompleted: ({ parentFileId }) => {
-      fetchFiles();
+      fetchFiles({ silent: true });
       if (isDrawerOpen && selectedFile?.ID === parentFileId) {
         setRefreshSignalCounter((x) => x + 1);
       }
@@ -89,6 +118,7 @@ export default function DashboardPage() {
       const response = await api.delete(`/files/${file.ID}`);
       // 无论是首次删除(200 deleted)还是幂等成功(200 already deleted)，都从列表移除
       setFiles((prev) => prev.filter((f) => f.ID !== file.ID));
+      fetchFiles({ silent: true });
       
       const isProcessing = ['pending', 'preprocessing', 'processing', 'classifying', 'extracting'].includes(file.ProcessingStatus);
       const msg = response.data?.message === "already deleted" 
@@ -132,6 +162,9 @@ export default function DashboardPage() {
         <PageTitle>信息提取</PageTitle>
         <PageDescription>上传您的文件，系统将自动处理并提取信息。</PageDescription>
         <PageActions>
+          <Button asChild variant="outline">
+            <Link href="/customer-analyses">客户分析</Link>
+          </Button>
           <CustomerExportDialog />
         </PageActions>
       </PageHeader>
@@ -149,7 +182,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <FileUploadZone
-                  onUploadSuccess={fetchFiles}
+                  onUploadSuccess={() => fetchFiles()}
                   onUploadCreated={(id, options) => {
                     setActiveParentId(id);
                     setLastUploadAutoAnnotate(!!options?.autoAnnotate);
@@ -175,11 +208,23 @@ export default function DashboardPage() {
                   <CardTitle>文件处理进度</CardTitle>
                   <CardDescription>查看已上传压缩包的处理状态与详情。</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <FileStatusTable 
                     files={files} 
                     onViewDetails={handleViewDetails} 
                     onDelete={handleDeleteFile}
+                  />
+                  <FileStatusPagination
+                    page={page}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    total={total}
+                    onPageChange={(next) => setPage(Math.max(Math.min(next, Math.max(totalPages, 1)), 1))}
+                    onPageSizeChange={(next) => {
+                      const bounded = Math.min(Math.max(next, 1), 100);
+                      setPageSize(bounded);
+                      setPage(1);
+                    }}
                   />
                 </CardContent>
               </Card>

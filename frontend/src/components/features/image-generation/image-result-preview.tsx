@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ImageDownloadButton } from './image-download-button';
 import { toast } from 'sonner';
 import { Loader2, Eye, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ImageResultPreviewProps {
   resultUrl: string;
@@ -107,9 +108,14 @@ export function ImageResultPreview({ resultUrl, jobId, status }: ImageResultPrev
 
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center h-48 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">正在加载预览...</p>
+        <div
+          className="flex h-48 flex-col items-center justify-center gap-3"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Skeleton className="h-32 w-full max-w-md rounded-md" />
+          <Skeleton className="h-4 w-28" />
         </div>
       );
     }

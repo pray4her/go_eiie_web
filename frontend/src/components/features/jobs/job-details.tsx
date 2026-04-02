@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { JobResultsToc } from './job-results-toc';
 import { cn } from '@/lib/utils';
+import { PageLoadingCard } from '@/components/ui/page-loading';
 import { createSSEConnection } from '@/lib/sse';
 
 interface JobDetailsProps {
@@ -103,12 +104,7 @@ export function JobDetails({ jobId }: JobDetailsProps) {
   
   const renderContent = () => {
     if (isLoading && !job) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="ml-4">正在加载任务详情...</p>
-        </div>
-      );
+      return <PageLoadingCard message="正在加载任务详情…" />;
     }
 
     if (!job) {

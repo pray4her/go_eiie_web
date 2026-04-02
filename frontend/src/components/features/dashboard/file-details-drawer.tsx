@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { ApiFile, ApiSubFile } from "@/types";
 import { toast } from "sonner";
@@ -567,8 +568,12 @@ export function FileDetailsDrawer({ open, onOpenChange, file, refreshSignal }: F
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    正在加载...
+                  <TableCell colSpan={7} className="h-24">
+                    <div className="flex flex-col gap-2 py-2" role="status" aria-live="polite" aria-busy="true">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-full max-w-md" />
+                      <Skeleton className="h-4 w-full max-w-sm" />
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : numberedSubFiles.length > 0 ? (

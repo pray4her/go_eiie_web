@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ListLoadingPlaceholder } from '@/components/ui/page-loading';
 
 export interface JobListHandles {
   refresh: () => void;
@@ -58,7 +59,7 @@ const JobList = forwardRef<JobListHandles>((_props, ref) => {
   }));
 
   if (isLoading) {
-    return <p>正在加载任务列表...</p>;
+    return <ListLoadingPlaceholder message="正在加载任务列表…" withTableSkeleton />;
   }
 
   if (jobs.length === 0) {

@@ -17,6 +17,7 @@ import { fetchAutoAnnotationJobs } from '@/lib/auto-annotations';
 import { toast } from 'sonner';
 import { AutoAnnotationJobsTable } from '@/components/features/auto-annotations/auto-annotation-jobs-table';
 import { AnnotationHistoryPagination } from '@/components/features/annotation/annotation-history-pagination';
+import { ListLoadingPlaceholder } from '@/components/ui/page-loading';
 
 export default function AutoAnnotationsPage() {
   const router = useRouter();
@@ -86,7 +87,7 @@ export default function AutoAnnotationsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            <p className="text-muted-foreground">正在加载...</p>
+            <ListLoadingPlaceholder message="正在加载任务列表…" withTableSkeleton />
           ) : (
             <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
               <AutoAnnotationJobsTable

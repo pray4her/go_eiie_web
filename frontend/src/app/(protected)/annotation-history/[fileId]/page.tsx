@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { AnnotationHistoryDetails } from '@/components/features/annotation/annotation-history-details';
 import { Container } from '@/components/ui/container';
 import { PageHeader, PageTitle } from '@/components/ui/page-header';
+import { PageLoadingCard } from '@/components/ui/page-loading';
 
 export default function AnnotationHistoryDetailPage() {
   const router = useRouter();
@@ -53,9 +54,7 @@ export default function AnnotationHistoryDetailPage() {
       </PageHeader>
 
       {isLoading ? (
-        <Card>
-          <CardContent className="p-6 text-muted-foreground">正在加载...</CardContent>
-        </Card>
+        <PageLoadingCard message="正在加载标注详情…" />
       ) : !data ? (
         <Card>
           <CardHeader>

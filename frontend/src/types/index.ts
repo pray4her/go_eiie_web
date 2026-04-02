@@ -9,6 +9,7 @@ export type ProcessingStatus =
   | 'classified'
   | 'extracting'
   | 'completed'
+  | 'completed_partial'
   | 'failed'
   | 'process_failed'
   | 'unsupported';
@@ -31,6 +32,39 @@ export interface ApiFile {
   ClassificationResult: string | null;
   ParentFileID: number | null;
   TaskType?: string;
+}
+
+export interface FilesQueryItem {
+  id: number;
+  parent_file_id: number | null;
+  is_parent: boolean;
+  original_file_name: string;
+  file_name: string;
+  classified_file_name: string;
+  file_size: number;
+  content_type: string;
+  task_type: string;
+  upload_status: string;
+  processing_status: ProcessingStatus;
+  file_type: string;
+  category_key: string;
+  folder_category: string;
+  customer_id: number | null;
+  expert_id: number | null;
+  expert_name: string;
+  auto_annotate: boolean;
+  child_count: number;
+  created_at: string;
+  updated_at: string;
+  last_activity_at: string | null;
+}
+
+export interface FilesQueryResponse {
+  items: FilesQueryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_page: number;
 }
 
 export interface ClassificationResult {
@@ -623,6 +657,7 @@ export interface CustomerAnalysisOverview {
   failed_count: number;
 }
 
+/** 第一轮简历对话（新 run）；旧 run 可能仅含 profile_data / formatted_resume_text */
 export interface CustomerAnalysisResumeProfile {
   status: CustomerAnalysisItemStatus | CustomerAnalysisRunStatus;
   primary_resume_file_id: number | null;
@@ -630,8 +665,22 @@ export interface CustomerAnalysisResumeProfile {
   profile_data: Record<string, unknown> | null;
   formatted_resume_text: string | null;
   error_message: string | null;
+  system_prompt_text?: string | null;
+  user_prompt_text?: string | null;
+  sent_contents?: unknown[];
+  history_snapshot?: unknown[];
+  raw_model_response?: Record<string, unknown> | null;
+  response_parts?: unknown[];
+  thought_text?: string | null;
+  answer_text?: string | null;
+  usage_metadata?: Record<string, unknown> | null;
+  provider?: string | null;
+  model_name?: string | null;
+  model_version?: string | null;
+  response_id?: string | null;
 }
 
+/** 第二轮类别对话（新 run）；旧 run 可能仍含 structured_data / communication_text 等 */
 export interface CustomerAnalysisDisplayItem {
   id: number;
   rule_code: string;
@@ -644,6 +693,20 @@ export interface CustomerAnalysisDisplayItem {
   structured_data: Record<string, unknown> | null;
   issue_count: number;
   error_message: string | null;
+  system_prompt_text?: string | null;
+  user_prompt_text?: string | null;
+  base_history_snapshot?: unknown[];
+  sent_contents?: unknown[];
+  history_snapshot?: unknown[];
+  raw_model_response?: Record<string, unknown> | null;
+  response_parts?: unknown[];
+  thought_text?: string | null;
+  answer_text?: string | null;
+  usage_metadata?: Record<string, unknown> | null;
+  provider?: string | null;
+  model_name?: string | null;
+  model_version?: string | null;
+  response_id?: string | null;
 }
 
 export interface CustomerAnalysisDisplayResponse {
@@ -651,4 +714,83 @@ export interface CustomerAnalysisDisplayResponse {
   overview: CustomerAnalysisOverview;
   resume_profile: CustomerAnalysisResumeProfile | null;
   items: CustomerAnalysisDisplayItem[];
+}
+
+// ========== Prompt Management (Prompt 管理) ==========
+
+export interface PromptListItem {
+  prompt_type: string;
+  label: string;
+  prompt_id: number;
+  version: number;
+  provider: string | null;
+  model_name: string | null;
+  schema_hash: string | null;
+  is_protected: boolean;
+  release_at: string | null;
+  release_by: string | null;
+  description: string | null;
+}
+
+export interface PromptRecord {
+  id: number;
+  name: string | null;
+  prompt_type: string;
+  provider: string | null;
+  model_name: string | null;
+  version: number;
+  system_prompt?: string | null;
+  user_prompt_template?: string | null;
+  json_schema?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface PromptResolved {
+  label: string;
+  schema_hash: string | null;
+  provider: string | null;
+  model_name: string | null;
+  cache_source: string | null;
+  description?: string | null;
+  release_at?: string | null;
+  release_by?: string | null;
+  is_protected?: boolean;
+  prompt: PromptRecord;
+}
+
+export interface PromptRelease {
+  prompt_type: string;
+  label: string;
+  prompt_id: number;
+  is_protected: boolean;
+  description?: string | null;
+  release_at?: string | null;
+  release_by?: string | null;
+}
+
+export interface CreatePromptVersionRequest {
+  name: string;
+  prompt_type?: string;
+  provider: string;
+  model_name: string;
+  system_prompt: string;
+  user_prompt_template: string;
+  json_schema?: string;
+  publish_label?: string;
+}
+
+export interface PublishPromptReleaseRequest {
+  prompt_id: number;
+  description?: string;
+  is_protected?: boolean;
+}
+
+export interface PromptMutationResponse {
+  message: string;
+  data: PromptRecord;
+}
+
+export interface PromptActionResponse {
+  message: string;
 }

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Container } from '@/components/ui/container';
 import { PageHeader, PageTitle } from '@/components/ui/page-header';
+import { PageLoadingCard } from '@/components/ui/page-loading';
 import { StatusBadge } from '@/components/features/dashboard/status-badge';
 import { ResumeProcessExportButton } from '@/components/features/resume-process/resume-process-export-button';
 import { ResumeProcessImportantColumnsNotice } from '@/components/features/resume-process/resume-process-important-columns-notice';
@@ -191,12 +192,7 @@ export default function ResumeProcessJobDetailsPage() {
       </PageHeader>
 
       {isLoading ? (
-        <Card>
-          <CardContent className="p-6 text-muted-foreground flex items-center">
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            正在加载...
-          </CardContent>
-        </Card>
+        <PageLoadingCard message="正在加载任务详情…" />
       ) : !data ? (
         <Card>
           <CardHeader>
